@@ -12,8 +12,7 @@ library(shinyWidgets)
 library(rsconnect)
 #library(thematic)
 
-relativePath = '/Users/baileyrusso/Desktop/NYC Data Science Academy/Project_1/ncaam-march-mania-2021/'
-
+relativePath = './ncaam-march-mania-2021/'
 
 #RegSeasonDataWithAdjustedStats <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataWithAdjustedStats.csv'))
 RegSeasonTT = read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonTT.csv'))

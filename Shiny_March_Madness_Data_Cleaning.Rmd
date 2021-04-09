@@ -16,7 +16,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
-relativePath = '/Users/baileyrusso/Desktop/NYC Data Science Academy/Project_1/ncaam-march-mania-2021/'
+relativePath = '/ncaam-march-mania-2021/'
 
 path_out = '/Users/baileyrusso/Desktop/NYC Data Science Academy/Project_1/ncaam-march-mania-2021//UserGeneratedDataFiles/'
 ```
