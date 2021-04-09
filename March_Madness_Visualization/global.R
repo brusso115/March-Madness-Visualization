@@ -9,10 +9,7 @@ library(shinydashboard)
 library(DT)
 library(flexdashboard)
 library(shinyWidgets)
-<<<<<<< HEAD
-=======
 library(rsconnect)
->>>>>>> new git repository
 #library(thematic)
 
 relativePath = '/Users/baileyrusso/Desktop/NYC Data Science Academy/Project_1/ncaam-march-mania-2021/'
@@ -24,11 +21,7 @@ RegSeasonTTGrouped = read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSea
 RegSeasonDataGrouped <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataGrouped.csv'))
 RegSeasonDataGroupedAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataGroupedAdjusted.csv'))
 RegSeasonData <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonData.csv'))
-<<<<<<< HEAD
-RegSeasonDataAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataAdjusted.csv'))
-=======
 #RegSeasonDataAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataAdjusted.csv'))
->>>>>>> new git repository
 RegSeasonDataGroupedAll <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataGroupedAll.csv'))
 RegSeasonDataMainGrouped <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataMainGrouped.csv'))
 season_averages <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/SeasonAverages.csv'))

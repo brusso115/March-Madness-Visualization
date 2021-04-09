@@ -104,9 +104,49 @@ shinyServer(function(input, output) {
       geom_abline(slope=1)+ theme(legend.title = element_blank()) + theme(legend.position = "none") + ggtitle(paste(paste(as.character(input$PairedStat),paste0('Adjusted_',input$PairedStat),sep=' vs '),'(2020 Regular Season)'))
     ggplotly(p3)
   })
+
+  # output$boxPlotAdjusted <- renderPlot({
+  #   
+  #   RegSeasonDataAdjusted %>% ggplot(RegSeasonDataAdjusted, mapping = aes(x=!!input$TeamAdjustedStat,fill=Outcome)) + geom_boxplot() +
+  #     ggtitle(paste("Winning Team vs Losing Team Distribution of", input$TeamAdjustedStat,sep=' '))
+  #   
+  # })
   
-<<<<<<< HEAD
-=======
+  output$mainDF <- renderDataTable({
+    RegSeasonTT_Sub = RegSeasonTTGrouped %>% select(.,Season,TeamID,NumberOfTournamentWins)
+    RegSeasonDataMainGrouped_Joined = inner_join(RegSeasonDataMainGrouped,RegSeasonTT_Sub,by=c("Season","TeamID"))
+    RegSeasonDataMainGrouped_Joined %>% select(.,Season,TeamName,Adjusted_OE,Adjusted_DE,Adjusted_EM,NumberOfTournamentWins) %>% mutate(.,Adjusted_OE=round(Adjusted_OE,2),Adjusted_DE=round(Adjusted_DE,2),Adjusted_EM=round(Adjusted_EM,2)) %>% filter(.,Season==as.name(input$Season))
+  })
+  
+  output$Predictions <- renderUI({
+    team_1 = team_averages %>% filter(.,TeamName==input$Team1)
+    team_2 = team_averages %>% filter(.,TeamName==input$Team2)
+    
+    ExpectedOE_team1 = season_averages[,'Adjusted_OE'] + (team_1[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_2[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
+    
+    ExpectedOE_team2 = season_averages[,'Adjusted_OE'] + (team_2[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_1[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
+    
+    ExpectedTempo = season_averages[,'Adjusted_Tempo'] + (team_1[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo']) + (team_2[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo'])
+    
+    Team1Score = ExpectedOE_team1/100 * ExpectedTempo 
+    Team2Score = ExpectedOE_team2/100 * ExpectedTempo
+    Team1Name = team_1[,'TeamName']
+    Team2Name = team_2[,'TeamName']
+    Team1Name <- data.frame(lapply(Team1Name, as.character), stringsAsFactors=FALSE)
+    Team2Name <- data.frame(lapply(Team2Name, as.character), stringsAsFactors=FALSE)
+    
+    div(style="display: flex; justify-content:space-around",
+      div(paste0(Team1Name, ':'), round(Team1Score),style="font-weight: bold; font-size:30px"),
+      div(
+        div(paste('Line: ',Team1Name),paste0(ifelse(Team2Score-Team1Score>0,'+',''),round(Team2Score-Team1Score))),
+        div('O/U:', round(Team1Score + Team2Score)),
+      style="margin-top: 30px"
+      ),
+      div(paste0(Team2Name, ':'),round(Team2Score),style="font-weight: bold; font-size:30px")
+    )
+    
+  })
+
   # output$boxPlotAdjusted <- renderPlot({
   #   
   #   RegSeasonDataAdjusted %>% ggplot(RegSeasonDataAdjusted, mapping = aes(x=!!input$TeamAdjustedStat,fill=Outcome)) + geom_boxplot() +
@@ -149,54 +189,6 @@ shinyServer(function(input, output) {
     
   })
   
->>>>>>> new git repository
-  output$boxPlotAdjusted <- renderPlot({
-    
-    RegSeasonDataAdjusted %>% ggplot(RegSeasonDataAdjusted, mapping = aes(x=!!input$TeamAdjustedStat,fill=Outcome)) + geom_boxplot() +
-      ggtitle(paste("Winning Team vs Losing Team Distribution of", input$TeamAdjustedStat,sep=' '))
-    
-  })
-  
-  output$mainDF <- renderDataTable({
-    RegSeasonTT_Sub = RegSeasonTTGrouped %>% select(.,Season,TeamID,NumberOfTournamentWins)
-    RegSeasonDataMainGrouped_Joined = inner_join(RegSeasonDataMainGrouped,RegSeasonTT_Sub,by=c("Season","TeamID"))
-    RegSeasonDataMainGrouped_Joined %>% select(.,Season,TeamName,Adjusted_OE,Adjusted_DE,Adjusted_EM,NumberOfTournamentWins) %>% mutate(.,Adjusted_OE=round(Adjusted_OE,2),Adjusted_DE=round(Adjusted_DE,2),Adjusted_EM=round(Adjusted_EM,2)) %>% filter(.,Season==as.name(input$Season))
-  })
-  
-  output$Predictions <- renderUI({
-    team_1 = team_averages %>% filter(.,TeamName==input$Team1)
-    team_2 = team_averages %>% filter(.,TeamName==input$Team2)
-    
-    ExpectedOE_team1 = season_averages[,'Adjusted_OE'] + (team_1[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_2[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
-    
-    ExpectedOE_team2 = season_averages[,'Adjusted_OE'] + (team_2[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_1[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
-    
-    ExpectedTempo = season_averages[,'Adjusted_Tempo'] + (team_1[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo']) + (team_2[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo'])
-    
-    Team1Score = ExpectedOE_team1/100 * ExpectedTempo 
-    Team2Score = ExpectedOE_team2/100 * ExpectedTempo
-    Team1Name = team_1[,'TeamName']
-    Team2Name = team_2[,'TeamName']
-    Team1Name <- data.frame(lapply(Team1Name, as.character), stringsAsFactors=FALSE)
-    Team2Name <- data.frame(lapply(Team2Name, as.character), stringsAsFactors=FALSE)
-    
-    div(style="display: flex; justify-content:space-around",
-      div(paste0(Team1Name, ':'), round(Team1Score),style="font-weight: bold; font-size:30px"),
-      div(
-        div(paste('Line: ',Team1Name),paste0(ifelse(Team2Score-Team1Score>0,'+',''),round(Team2Score-Team1Score))),
-        div('O/U:', round(Team1Score + Team2Score)),
-      style="margin-top: 30px"
-      ),
-      div(paste0(Team2Name, ':'),round(Team2Score),style="font-weight: bold; font-size:30px")
-    )
-    
-  })
-  
-<<<<<<< HEAD
-
-
-=======
->>>>>>> new git repository
 })
 
 # server <- function(input, output) {
