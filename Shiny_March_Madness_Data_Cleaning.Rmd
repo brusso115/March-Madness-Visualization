@@ -1,0 +1,467 @@
+---
+title: "Shiny_March_Madness_Data_Cleaning"
+author: "Bailey Russo"
+date: "4/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+relativePath = '/Users/baileyrusso/Desktop/NYC Data Science Academy/Project_1/ncaam-march-mania-2021/'
+
+path_out = '/Users/baileyrusso/Desktop/NYC Data Science Academy/Project_1/ncaam-march-mania-2021//UserGeneratedDataFiles/'
+```
+
+```{r}
+
+regSeasonAll <- read.csv(paste0(relativePath,'MDataFiles_Stage2/MRegularSeasonDetailedResults.csv'))
+
+#regSeasonAll <- read.csv(paste0(relativePath,'MDataFiles_Stage2/MNCAATourneyDetailedResults.csv'))
+teams <- read.csv(paste0(relativePath,'MDataFiles_Stage1/MTeams.csv'))
+teams = teams %>% select(.,TeamID, TeamName)
+seasons <- c(2010:2021)
+regSeasonAll
+
+dataframes_all = c()
+for (j in 1:length(seasons)) {
+  
+season = seasons[[j]]
+regSeason = regSeasonAll %>% filter(.,Season==season)
+dataframes_one_season = c()
+
+for (i in 1:length(teams$TeamID)) {
+  teamID = teams$TeamID[i]
+  
+  dataframes_one_season[[i]] = regSeason %>% filter(.,WTeamID == teamID| LTeamID == teamID) %>%  mutate(.,Score=ifelse(WTeamID==teamID,WScore,LScore),
+              OppScore=ifelse(WTeamID==teamID,LScore,WScore),
+              
+              FGM=ifelse(WTeamID==teamID,WFGM,LFGM),
+              OppFGM=ifelse(WTeamID==teamID,LFGM,WFGM),
+              
+              FGA=ifelse(WTeamID==teamID,WFGA,LFGA),
+              OppFGA=ifelse(WTeamID==teamID,LFGA,WFGA),
+              
+              FGM3=ifelse(WTeamID==teamID,WFGM3,LFGM3),
+              OppFGM3=ifelse(WTeamID==teamID,LFGM3,WFGM3),
+              
+              FGA3=ifelse(WTeamID==teamID,WFGA3,LFGA3),
+              OppFGA3=ifelse(WTeamID==teamID,LFGA3,WFGA3),
+              
+              FTM=ifelse(WTeamID==teamID,WFTM,LFTM),
+              OppFTM=ifelse(WTeamID==teamID,LFTM,WFTM),
+              
+              FTA=ifelse(WTeamID==teamID,WFTA,LFTA),
+              OppFTA=ifelse(WTeamID==teamID,LFTA,WFTA),
+              
+              OR=ifelse(WTeamID==teamID,WOR,LOR),
+              OppOR=ifelse(WTeamID==teamID,LOR,WOR),
+              
+              DR=ifelse(WTeamID==teamID,WDR,LDR),
+              OppDR=ifelse(WTeamID==teamID,LDR,WDR),
+              
+              Ast=ifelse(WTeamID==teamID,WAst,LAst),
+              OppAst=ifelse(WTeamID==teamID,LAst,WAst),
+              
+              TO=ifelse(WTeamID==teamID,WTO,LTO),
+              OppTO=ifelse(WTeamID==teamID,LTO,WTO),
+              
+              Stl=ifelse(WTeamID==teamID,WStl,LStl),
+              OppStl=ifelse(WTeamID==teamID,LStl,WStl),
+              
+              Blk=ifelse(WTeamID==teamID,WBlk,LBlk),
+              OppBlk=ifelse(WTeamID==teamID,LBlk,WBlk),
+              
+              PF=ifelse(WTeamID==teamID,WPF,LPF),
+              OppPF=ifelse(WTeamID==teamID,LPF,WPF),
+              
+              TeamID=ifelse(WTeamID==teamID,WTeamID,LTeamID),
+              OppTeamID=ifelse(WTeamID==teamID,LTeamID,WTeamID),
+              
+              Outcome=ifelse(WTeamID==teamID, as.character('W'),as.character('L')),
+              
+              GameLoc=ifelse(WTeamID==teamID, as.character(WLoc), ifelse(WLoc==as.character('N'),as.character('N'),ifelse(WLoc==as.character('H'),as.character('A'),as.character('H'))))
+              )
+}
+
+
+dataframes_all[[j]] = do.call("rbind", dataframes_one_season)
+
+}
+
+combined_df = do.call("rbind", dataframes_all)
+combined_df = combined_df[, -c(3:34)]
+
+combined_df = combined_df %>% mutate(.,FGPercentage=FGM/FGA) %>% mutate(.,OppFGPercentage=OppFGM/OppFGA) %>% mutate(.,ThreePercentage=FGM3/FGA3) %>% mutate(.,OppThreePercentage=OppFGM3/OppFGA3) %>% mutate(.,FTPercentage=FTM/FTA) %>% mutate(.,OppFTPercentage=OppFTM/OppFTA) %>% mutate(.,TSPercentage=Score/(2*(FGA + 0.44*FTA))) %>% mutate(.,OppTSPercentage=OppScore/(2*(OppFGA + 0.44*OppFTA))) %>% mutate(.,EffectiveFGPercentage=(FGM + 0.5*FGM3)/FGA) %>% mutate(.,OppEffectiveFGPercentage=(OppFGM + 0.5*OppFGM3)/OppFGA) %>% mutate(.,Possessions=(FGA - OR) + TO + (0.44*FTA)) %>% mutate(.,OppPossessions=(OppFGA - OppOR) + OppTO + (0.44*OppFTA)) %>% mutate(.,OE=(Score/Possessions)*100) %>% mutate(OppOE=(OppScore/OppPossessions)*100) %>% mutate(.,DE=(OppScore/OppPossessions)*100) %>% mutate(.,OppDE=(Score/Possessions)*100) %>% mutate(.,TurnoverPercentage=TO/(FGA +(0.44*FTA + TO))) %>% mutate(.,OppTurnoverPercentage=OppTO/(OppFGA +(0.44*OppFTA + OppTO))) %>% mutate(.,ORPercentage=OR/(OR + OppDR)) %>% mutate(.,OppORPercentage=OppOR/(OppOR + DR)) %>% mutate(.,DRPercentage=DR/(OppOR + DR)) %>% mutate(.,OppDRPercentage=OppDR/(OR + OppDR))
+```
+
+# Adjusting Stats
+```{r}
+############### Adjusting stats ##################
+###############GameAverageOE - (OppTeamSeasonAverageDE - NationalSeasonAverage)############
+
+combined_df
+drop_cols = c('DayNum','Outcome','GameLoc','OppTeamID')
+
+#Get the average statistic for each team at the season level
+combined_df_team_avg = combined_df %>% select(-drop_cols) %>% group_by(.,Season,TeamID) %>% summarise(across(c("Score":"OppDRPercentage"),mean))
+
+#Get the national average for each statistic
+combined_df_avg = combined_df %>% select(-drop_cols) %>% group_by(.,Season,TeamID) %>% summarise(across(c("Score":"OppDRPercentage"),mean)) %>% group_by(.,Season) %>% summarise(across(c("Score":"OppDRPercentage"),mean))
+
+#Rename all columns before merging
+combined_df_team_avg = combined_df_team_avg %>% rename_all(~ paste0("AvgOpp_", names(combined_df_team_avg)))
+combined_df_avg = combined_df_avg %>% rename_all(~ paste0("NationalAvg_",names(combined_df_avg)))
+
+
+#Merge to get opponent seasonal averages and national averages
+joined_df = inner_join(combined_df, combined_df_team_avg, by=c("Season" = "AvgOpp_Season", "OppTeamID" = "AvgOpp_TeamID"))
+
+joined_df = inner_join(joined_df, combined_df_avg,by=c("Season" = "NationalAvg_Season"))
+joined_df = inner_join(joined_df, teams, by="TeamID")
+
+test = joined_df
+
+############### Adjusting stats ##################
+###############GameAverageOE - (OppTeamSeasonAverageDE - NationalSeasonAverage)############
+colnames(test)
+for (i in 3:55) {
+  if (colnames(test)[i] == 'Outcome' | colnames(test)[i] == 'TeamID' | colnames(test)[i] == 'OppTeamID' | colnames(test)[i] == 'GameLoc') {
+    print('No')
+  } else {
+  if (startsWith(colnames(test)[i], 'Opp')) {
+    stat_name = as.name(paste0('Adjusted_',colnames(test)[i]))
+    test = test %>% mutate(.,!!stat_name := test[,i] - ((get(paste0('AvgOpp_',substr(colnames(test)[i],4,nchar(colnames(test)[i]))))) - get(paste0('NationalAvg_',substr(colnames(test)[i],4,nchar(colnames(test)[i]))))))
+  } else {
+    stat_name = as.name(paste0('Adjusted_',colnames(test)[i]))
+    test = test %>% mutate(.,!!stat_name := test[,i] - (get(paste0('AvgOpp_Opp',colnames(test)[i])) - get(paste0('NationalAvg_Opp',colnames(test)[i]))))
+  }
+  }
+}
+
+colnames(test)
+test = test[-c(57:156)]
+test = test %>% mutate(.,Adjusted_EM = Adjusted_OE - Adjusted_DE, Adjusted_OppEM = Adjusted_OppOE - Adjusted_OppDE)
+
+
+test = test %>% select(.,-c('Adjusted_FTPercentage','Adjusted_OppFTPercentage'))
+
+test %>% select(.,Adjusted_OE,Adjusted_OppOE, Adjusted_DE, Adjusted_OppDE,OE,OppOE,DE)
+test %>% filter(.,Season=='2019') %>% group_by(.,Season,TeamID, TeamName) %>% summarise(.,OE=mean(OE)) %>% arrange(.,desc(OE))
+
+test
+
+```
+
+# Calculating Adjusted Tempo and Predicting Score Between Two Teams
+```{r}
+
+possession_stats_team = test %>% group_by(.,Season,TeamID) %>% summarise(PossessionsPerGame=mean(Possessions))
+
+possession_stats_opp = test %>% group_by(.,Season,TeamID) %>% summarise(OppPossessionsPerGame=mean(Possessions))
+
+possession_stats_opp
+test
+test = inner_join(test,possession_stats_team,by=c('Season','TeamID'))
+test = inner_join(test,possession_stats_opp,by=c('Season' = 'Season','OppTeamID' = 'TeamID'))
+
+national_avg_possessions_per_game = test %>% group_by(.,Season,TeamID) %>% summarise(.,PossessionsPerGame=mean(Possessions)) %>% group_by(.,Season) %>% summarise(.,NationalAvg_PossessionsPerGame=mean(PossessionsPerGame))
+
+
+test = inner_join(test, national_avg_possessions_per_game,by='Season')
+colnames(test)
+
+test
+test = test %>% mutate(.,ExpectedPossessions=NationalAvg_PossessionsPerGame + ( PossessionsPerGame - NationalAvg_PossessionsPerGame) + (OppPossessionsPerGame - NationalAvg_PossessionsPerGame)) %>% mutate(.,ActualPossessionsInGame=(Possessions + OppPossessions) / 2)
+
+# test %>% mutate(.,Adjusted_Tempo = ((((ActualPossessionsInGame - ExpectedPossessions)/ExpectedPossessions)*100) * (PossessionsPerGame/100)) + PossessionsPerGame) %>% mutate(.,Adjusted_OppTempo = ((((ActualPossessionsInGame - ExpectedPossessions)/ExpectedPossessions)*100) * (OppPossessionsPerGame/100)) + OppPossessionsPerGame) %>% mutate(.,check=NationalAvg_PossessionsPerGame - ((Adjusted_Tempo - NationalAvg_PossessionsPerGame) + (Adjusted_OppTempo - NationalAvg_PossessionsPerGame)))
+# 
+
+test = test %>% mutate(.,Difference=(ActualPossessionsInGame - ExpectedPossessions)) %>% mutate(.,SeasonPaceSum=PossessionsPerGame + OppPossessionsPerGame) %>% mutate(.,SeasonPacePercentage=PossessionsPerGame/SeasonPaceSum) %>% mutate(.,OppSeasonPacePercentage=OppPossessionsPerGame/SeasonPaceSum) %>% mutate(.,PaceShare=Difference*SeasonPacePercentage) %>% mutate(.,OppPaceShare=Difference*OppSeasonPacePercentage) %>% mutate(.,Adjusted_Tempo=PaceShare+PossessionsPerGame) %>% mutate(.,Adjusted_OppTempo=OppPaceShare+OppPossessionsPerGame) %>% mutate(.,check = NationalAvg_PossessionsPerGame + (Adjusted_Tempo-NationalAvg_PossessionsPerGame) + (Adjusted_OppTempo-NationalAvg_PossessionsPerGame))
+
+test
+
+team_averages = test %>% filter(.,Season=='2021') %>% group_by(.,Season,TeamName,TeamID) %>% summarise(.,across(c("Score":"Adjusted_OppTempo"),mean)) %>% select(.,Season,TeamID,TeamName,Adjusted_OE,Adjusted_DE,Adjusted_OppOE,Adjusted_OppDE,Adjusted_Tempo,Adjusted_OppTempo)
+
+season_averages = test %>% filter(.,Season=='2021') %>% group_by(.,Season) %>% select(.,Season,TeamID,TeamName,Adjusted_OE,Adjusted_DE,Adjusted_OppOE,Adjusted_OppDE,Adjusted_Tempo,Adjusted_OppTempo) %>% summarise(across(c('Adjusted_OE':'Adjusted_OppTempo'),mean))
+
+
+######### Predict Score For Two Teams ############
+team_1 = team_averages %>% filter(.,TeamName=='Baylor')
+team_2 = team_averages %>% filter(.,TeamName=='Wisconsin')
+
+season_averages
+team_1
+
+ExpectedOE_team1 = season_averages[,'Adjusted_OE'] + (team_1[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_2[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
+
+ExpectedOE_team2 = season_averages[,'Adjusted_OE'] + (team_2[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_1[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
+
+ExpectedTempo = season_averages[,'Adjusted_Tempo'] + (team_1[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo']) + (team_2[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo'])
+
+Team1Score = ExpectedOE_team1/100 * ExpectedTempo 
+Team2Score = ExpectedOE_team2/100 * ExpectedTempo
+Team1Name = team_1[,'TeamName']
+Team2Name = team_2[,'TeamName']
+Team1Name <- data.frame(lapply(Team1Name, as.character), stringsAsFactors=FALSE)
+Team2Name <- data.frame(lapply(Team2Name, as.character), stringsAsFactors=FALSE)
+
+sprintf("%s : %s %s : %s", Team1Name, Team1Score, Team2Name, Team2Score)
+
+test %>% filter(.,Season=='2021') %>% group_by(.,Season,TeamID,TeamName) %>% summarise(.,v=mean(Adjusted_Tempo)) %>% arrange(.,desc(v))
+
+test %>% filter(.,Season=='2021') %>% group_by(.,Season,TeamID,TeamName) %>% summarise(.,v=mean(Adjusted_EM)) %>% arrange(.,desc(v))
+
+colnames(test)
+test %>% filter(.,Season=='2020') %>% group_by(.,Season,TeamID,TeamName) %>% summarise(.,v=mean(OE)) %>% arrange(.,desc(v))
+test %>% filter(.,Season=='2020') %>% group_by(.,Season,TeamID,TeamName) %>% summarise(.,v=mean(Adjusted_OE)) %>% arrange(.,desc(v))
+
+colnames(test)
+test = test %>% select(-c('PossessionsPerGame':'OppPaceShare')) %>% select(.,-c("check"))
+
+```
+
+# Get dataset with adjusted stats and data with non-adjusted stats
+```{r}
+
+colnames(test)
+teamWinPercentage = test %>% group_by(.,Season,TeamID) %>% summarise(.,WinPercentage=sum(Outcome=='W')/n())
+test = test %>% mutate(.,EM=OE-DE)
+colnames(test)
+RegSeasonData = test %>% select(-c(32,34)) %>% select(.,-c('Adjusted_Score':'Adjusted_OppTempo'))
+RegSeasonDataGrouped = RegSeasonData %>% select(.,-c('Outcome')) %>% group_by(.,Season,TeamName,TeamID) %>% summarise(.,across(c('Score':'EM'),mean))
+RegSeasonDataGrouped = inner_join(RegSeasonDataGrouped,teamWinPercentage,by=c('Season','TeamID'))
+
+colnames(test)
+RegSeasonDataAdjusted = test %>% select(.,-c('Score':'OppPF')) %>% select(.,-c('OppTeamID')) %>% select(.,-c('GameLoc':'OppDRPercentage')) %>% select(.,-c(,'EM'))
+
+RegSeasonDataGroupedAdjusted = RegSeasonDataAdjusted %>% select(.,-c('Outcome'))%>% group_by(.,Season,TeamName,TeamID) %>% summarise(.,across(c('Adjusted_Score':'Adjusted_OppTempo'),mean))
+
+RegSeasonDataGroupedAdjusted = inner_join(RegSeasonDataGroupedAdjusted,teamWinPercentage,by=c('Season','TeamID'))
+
+RegSeasonDataGroupedAdjusted
+RegSeasonDataGroupedAll = inner_join(RegSeasonDataGrouped,RegSeasonDataGroupedAdjusted,by=c('Season','TeamName','TeamID')) %>% select(.,-c(WinPercentage.y)) %>% rename(.,WinPercentage=WinPercentage.x)
+```
+
+#Home Field Advantage
+
+```{r}
+test %>% filter(.,Season=='2019') %>% group_by(.,GameLoc) %>% summarise(across(c("Score":"Adjusted_DRPercentage"),mean))
+
+test %>% filter(.,Season=='2019') %>% summarise(.,meanAdjusted_OE=mean(Adjusted_OE))
+
+test %>% filter(.,Season=='2019') %>% group_by(.,TeamID,GameLoc) %>% summarise(across(c("Score":"Adjusted_DRPercentage"),mean)) %>% mutate(.,HCA=Score[GameLoc=='H'] - Score[GameLoc=='A'])
+
+hca = test %>% filter(.,Season=='2019') %>% group_by(.,GameLoc) %>% summarise(across(c("Score":"Adjusted_OppEM"),mean))
+
+hca
+hca[hca$GameLoc=='H',2:104] - hca[hca$GameLoc=='A',2:104]
+
+```
+
+# Calculating strength of schedule
+```{r}
+colnames(test)
+AdjEff = test %>% group_by(.,Season,TeamID) %>% summarise(Adjusted_OE=mean(Adjusted_OE), Adjusted_DE=mean(Adjusted_DE), Adjusted_EM=mean(Adjusted_EM))
+
+
+AdjEff = AdjEff %>% rename(.,OppSeasonAdjusted_OE = Adjusted_OE,OppSeasonAdjusted_DE = Adjusted_DE,OppSeasonAdjusted_EM = Adjusted_EM)
+AdjEff
+test
+test_withOppAdjEff = inner_join(test,AdjEff,by=c("Season" = "Season","OppTeamID" = "TeamID"))
+test_withOppAdjEff
+RegSeasonDataMain = test_withOppAdjEff
+colnames(RegSeasonDataMain)
+RegSeasonDataMainGrouped = RegSeasonDataMain  %>% group_by(.,Season,TeamName, TeamID) %>% summarise(across(c('Score':'OppSeasonAdjusted_EM'),mean)) %>% select(.,-c('Outcome','GameLoc'))
+
+test_withOppAdjEff %>% group_by(.,Season,TeamName,TeamID) %>% summarise(across(c('OppSeasonAdjusted_OE':'OppSeasonAdjusted_EM'),mean)) %>% filter(.,Season=='2021') %>% arrange(.,desc(OppSeasonAdjusted_EM))
+
+test_withOppAdjEff %>% group_by(.,Season,TeamName,TeamID) %>% summarise(Adjusted_OE=mean(Adjusted_OE),Adjusted_DE=mean(Adjusted_DE),Adjusted_EM=mean(Adjusted_EM),OppSeasonAdjusted_OE=mean(OppSeasonAdjusted_OE),OppSeasonAdjusted_DE=mean(OppSeasonAdjusted_DE),OppSeasonAdjusted_EM=mean(OppSeasonAdjusted_EM)) %>% filter(.,Season=='2021') %>% mutate(SOSAdjustment=(Adjusted_EM+(OppSeasonAdjusted_EM))) %>% arrange(.,desc(SOSAdjustment))
+
+
+```
+# Join Regular Season Win Percentage to main grouped dataset
+```{r}
+
+WinPercentageData = RegSeasonData %>% group_by(.,Season,TeamID) %>% summarise(numWins=sum(Outcome=='W'), numLosses=sum(Outcome=='L')) %>% mutate(.,WinPercentage_RegSeason=numWins/(numWins+numLosses)) %>% select(.,Season,TeamID,WinPercentage_RegSeason)
+
+RegSeasonDataMainGrouped = inner_join(RegSeasonDataMainGrouped, WinPercentageData, by=c('Season','TeamID'))
+
+colnames(RegSeasonDataMainGrouped)
+RegSeasonDataMainGrouped = RegSeasonDataMainGrouped %>% select(c(-1,-110)) %>% rename(WinPercentage_RegSeason = WinPercentage_RegSeason.y)
+
+```
+
+# Calculate number of wins for each team in the tournament
+```{r}
+tourneyResultsData <- read.csv(paste0(relativePath,'MDataFiles_Stage2/MNCAATourneyDetailedResults.csv'))
+
+#regSeasonAll <- read.csv(paste0(relativePath,'MDataFiles_Stage2/MNCAATourneyDetailedResults.csv'))
+teams <- read.csv(paste0(relativePath,'MDataFiles_Stage1/MTeams.csv'))
+teams = teams %>% select(.,TeamID, TeamName)
+seasons <- c(2010:2021)
+tourneyResultsData
+
+dataframes_all = c()
+for (j in 1:length(seasons)) {
+  
+season = seasons[[j]]
+regSeason = tourneyResultsData %>% filter(.,Season==season)
+dataframes_one_season = c()
+
+for (i in 1:length(teams$TeamID)) {
+  teamID = teams$TeamID[i]
+  
+  dataframes_one_season[[i]] = regSeason %>% filter(.,WTeamID == teamID| LTeamID == teamID) %>%  mutate(.,Score=ifelse(WTeamID==teamID,WScore,LScore),
+              OppScore=ifelse(WTeamID==teamID,LScore,WScore),
+              
+              FGM=ifelse(WTeamID==teamID,WFGM,LFGM),
+              OppFGM=ifelse(WTeamID==teamID,LFGM,WFGM),
+              
+              FGA=ifelse(WTeamID==teamID,WFGA,LFGA),
+              OppFGA=ifelse(WTeamID==teamID,LFGA,WFGA),
+              
+              FGM3=ifelse(WTeamID==teamID,WFGM3,LFGM3),
+              OppFGM3=ifelse(WTeamID==teamID,LFGM3,WFGM3),
+              
+              FGA3=ifelse(WTeamID==teamID,WFGA3,LFGA3),
+              OppFGA3=ifelse(WTeamID==teamID,LFGA3,WFGA3),
+              
+              FTM=ifelse(WTeamID==teamID,WFTM,LFTM),
+              OppFTM=ifelse(WTeamID==teamID,LFTM,WFTM),
+              
+              FTA=ifelse(WTeamID==teamID,WFTA,LFTA),
+              OppFTA=ifelse(WTeamID==teamID,LFTA,WFTA),
+              
+              OR=ifelse(WTeamID==teamID,WOR,LOR),
+              OppOR=ifelse(WTeamID==teamID,LOR,WOR),
+              
+              DR=ifelse(WTeamID==teamID,WDR,LDR),
+              OppDR=ifelse(WTeamID==teamID,LDR,WDR),
+              
+              Ast=ifelse(WTeamID==teamID,WAst,LAst),
+              OppAst=ifelse(WTeamID==teamID,LAst,WAst),
+              
+              TO=ifelse(WTeamID==teamID,WTO,LTO),
+              OppTO=ifelse(WTeamID==teamID,LTO,WTO),
+              
+              Stl=ifelse(WTeamID==teamID,WStl,LStl),
+              OppStl=ifelse(WTeamID==teamID,LStl,WStl),
+              
+              Blk=ifelse(WTeamID==teamID,WBlk,LBlk),
+              OppBlk=ifelse(WTeamID==teamID,LBlk,WBlk),
+              
+              PF=ifelse(WTeamID==teamID,WPF,LPF),
+              OppPF=ifelse(WTeamID==teamID,LPF,WPF),
+              
+              TeamID=ifelse(WTeamID==teamID,WTeamID,LTeamID),
+              OppTeamID=ifelse(WTeamID==teamID,LTeamID,WTeamID),
+              
+              Outcome=ifelse(WTeamID==teamID, as.character('W'),as.character('L')),
+              
+              GameLoc=ifelse(WTeamID==teamID, as.character(WLoc), ifelse(WLoc==as.character('N'),as.character('N'),ifelse(WLoc==as.character('H'),as.character('A'),as.character('H'))))
+              )
+}
+
+dataframes_all[[j]] = do.call("rbind", dataframes_one_season)
+
+}
+
+combined_df = do.call("rbind", dataframes_all)
+combined_df = combined_df[, -c(3:34)]
+combined_df = combined_df %>% group_by(.,Season, TeamID) %>% summarise(.,NumberOfTournamentWins=sum(Outcome=='W'))
+
+num_tourney_wins = combined_df
+
+test_withTourneyWinData = inner_join(test,num_tourney_wins,by=c('Season','TeamID'))
+WinPercentage_RegSeason = test_withTourneyWinData %>% group_by(.,Season,TeamID) %>% summarise(numWins=sum(Outcome=='W'), numLosses=sum(Outcome=='L')) %>% mutate(.,WinPercentage_RegSeason=numWins/(numWins+numLosses))
+WinPercentage_RegSeason = WinPercentage_RegSeason %>% select(.,Season,TeamID,WinPercentage_RegSeason)
+
+test_withTourneyWinData = inner_join(test_withTourneyWinData,WinPercentage_RegSeason,by=c('Season','TeamID'))
+
+test_withTourneyWinData_Grouped = test_withTourneyWinData %>% group_by(.,Season,TeamID) %>% summarise(across(c('Score':'WinPercentage_RegSeason'),mean)) %>% select(.,-c('Outcome','GameLoc','TeamName'))
+```
+
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataMain.csv',sep = '')
+#write.csv(RegSeasonDataMain,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataMainGrouped.csv',sep = '')
+#write.csv(RegSeasonDataMainGrouped,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataWithAdjustedStats.csv',sep = '')
+#write.csv(test,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataWithAdjustedStatsWithTempo.csv',sep = '')
+#write.csv(test,fileName)
+```
+
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonTT.csv',sep = '')
+#write.csv(test_withTourneyWinData,fileName)
+```
+
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonTTGrouped.csv',sep = '')
+#write.csv(test_withTourneyWinData_Grouped,fileName)
+```
+
+```{r}
+#RegSeasonData = RegSeasonData %>% filter(.,Season > 2016 )
+#fileName = paste(path_out, 'RegSeasonData.csv',sep = '')
+#write.csv(RegSeasonData,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataAdjusted.csv',sep = '')
+#write.csv(RegSeasonDataAdjusted,fileName)
+```
+
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataGrouped.csv',sep = '')
+#write.csv(RegSeasonDataGrouped,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataGroupedAdjusted.csv',sep = '')
+#write.csv(RegSeasonDataGroupedAdjusted,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'RegSeasonDataGroupedAll.csv',sep = '')
+#write.csv(RegSeasonDataGroupedAll,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'SeasonAverages.csv',sep = '')
+#write.csv(season_averages,fileName)
+```
+
+```{r}
+#fileName = paste(path_out, 'TeamAverages.csv',sep = '')
+#write.csv(team_averages,fileName)
+```
+
+
+
+
+
+

@@ -1,0 +1,35 @@
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ggcorrplot)
+library(googleVis)
+library(plotly)
+library(shinydashboard)
+library(DT)
+library(flexdashboard)
+library(shinyWidgets)
+<<<<<<< HEAD
+=======
+library(rsconnect)
+>>>>>>> new git repository
+#library(thematic)
+
+relativePath = '/Users/baileyrusso/Desktop/NYC Data Science Academy/Project_1/ncaam-march-mania-2021/'
+
+
+#RegSeasonDataWithAdjustedStats <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataWithAdjustedStats.csv'))
+RegSeasonTT = read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonTT.csv'))
+RegSeasonTTGrouped = read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonTTGrouped.csv'))
+RegSeasonDataGrouped <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataGrouped.csv'))
+RegSeasonDataGroupedAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataGroupedAdjusted.csv'))
+RegSeasonData <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonData.csv'))
+<<<<<<< HEAD
+RegSeasonDataAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataAdjusted.csv'))
+=======
+#RegSeasonDataAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataAdjusted.csv'))
+>>>>>>> new git repository
+RegSeasonDataGroupedAll <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataGroupedAll.csv'))
+RegSeasonDataMainGrouped <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataMainGrouped.csv'))
+season_averages <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/SeasonAverages.csv'))
+team_averages <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/TeamAverages.csv'))

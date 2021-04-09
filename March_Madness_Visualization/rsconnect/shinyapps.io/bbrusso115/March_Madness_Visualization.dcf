@@ -1,0 +1,12 @@
+name: March_Madness_Visualization
+title: March_Madness_Visualization
+username:
+account: bbrusso115
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3938797
+bundleId: 4452336
+url: https://bbrusso115.shinyapps.io/March_Madness_Visualization/
+when: 1618003706.85216
+asMultiple: FALSE
+asStatic: FALSE
