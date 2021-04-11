@@ -22,6 +22,6 @@ RegSeasonDataGroupedAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataF
 RegSeasonData <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonData.csv'))
 #RegSeasonDataAdjusted <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataAdjusted.csv'))
 RegSeasonDataGroupedAll <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataGroupedAll.csv'))
-RegSeasonDataMainGrouped <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataMainGrouped.csv'))
+#RegSeasonDataMainGrouped <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataMainGrouped.csv'))
 season_averages <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/SeasonAverages.csv'))
 team_averages <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/TeamAverages.csv'))

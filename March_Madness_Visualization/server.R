@@ -73,28 +73,25 @@ shinyServer(function(input, output) {
   })
 
   output$scatter <- renderPlotly({
-    RegSeasonDataMainGrouped_Sub = RegSeasonDataMainGrouped %>% filter(.,Season=='2020')
-    sub <- subset(RegSeasonDataMainGrouped_Sub,TeamName=='S Dakota St')
-    p <- ggplot(RegSeasonDataMainGrouped_Sub, aes(x=OE,y=DE,color=TeamName)) + geom_point() + ggtitle("Offensive Efficiency vs Devensive Efficiency (2020 Regular Season)") + theme(legend.title = element_blank()) + theme(legend.position = "none")
+    RegSeasonDataGroupedAll_Sub = RegSeasonDataGroupedAll %>% filter(.,Season=='2020')
+    p <- ggplot(RegSeasonDataGroupedAll_Sub, aes(x=Offensive_Efficiency,y=Defensive_Efficiency,color=TeamName)) + geom_point() + ggtitle("Offensive Efficiency vs Devensive Efficiency (2020 Regular Season)") + theme(legend.title = element_blank()) + theme(legend.position = "none")
     ggplotly(p)
   })
   
   output$scatterAdjusted <- renderPlotly({
-    RegSeasonDataMainGrouped_Sub = RegSeasonDataMainGrouped %>% filter(.,Season=='2020')
-    #RegSeasonDataWithAdjustedStats_Sub = RegSeasonDataWithAdjustedStats %>% filter(.,Season=='2020') %>% group_by(.,Season,TeamName,TeamID) %>% summarise(.,AvgAdjustedSeasonOE=mean(Adjusted_OE),AvgAdjustedSeasonDE=mean(Adjusted_DE))
-    sub <- subset(RegSeasonDataMainGrouped_Sub,TeamName=='S Dakota St')
-    p2 <- ggplot(RegSeasonDataMainGrouped_Sub, aes(x=Adjusted_OE,y=Adjusted_DE,color=TeamName)) + geom_point() + ggtitle("Adjusted Offensive Efficiency vs Adjusted Devensive Efficiency (2020 Regular Season)") + theme(legend.title = element_blank()) + theme(legend.position = "none")
+    RegSeasonDataGroupedAll_Sub = RegSeasonDataGroupedAll %>% filter(.,Season=='2020')
+    p2 <- ggplot(RegSeasonDataGroupedAll_Sub, aes(x=Adjusted_Offensive_Efficiency,y=Adjusted_Defensive_Efficiency,color=TeamName)) + geom_point() + ggtitle("Adjusted Offensive Efficiency vs Adjusted Devensive Efficiency (2020 Regular Season)") + theme(legend.title = element_blank()) + theme(legend.position = "none")
     ggplotly(p2)
   })
   
   output$OETable <- renderDataTable({
     
-    RSSorted = RegSeasonDataMainGrouped %>% filter(.,Season=='2020') %>% arrange(.,desc(OE)) %>% select(.,Season,TeamName,OE) %>% mutate(OE=round(OE,2))
+    RSSorted = RegSeasonDataGroupedAll %>% filter(.,Season=='2020') %>% arrange(.,desc(Offensive_Efficiency)) %>% select(.,Season,TeamName,Offensive_Efficiency) %>% mutate(Offensive_Efficiency=round(Offensive_Efficiency,2))
     DT::datatable(RSSorted,options = list(lengthChange=FALSE, pageLength=10, searching=FALSE), rownames=FALSE)
   })
   
   output$AdjustedOETable <- renderDataTable({
-    RSSorted = RegSeasonDataMainGrouped %>% filter(.,Season=='2020') %>% arrange(.,desc(Adjusted_OE)) %>% select(.,Season,TeamName,Adjusted_OE) %>% mutate(Adjusted_OE=round(Adjusted_OE,2))
+    RSSorted = RegSeasonDataGroupedAll %>% filter(.,Season=='2020') %>% arrange(.,desc(Adjusted_Offensive_Efficiency)) %>% select(.,Season,TeamName,Adjusted_Offensive_Efficiency) %>% mutate(Adjusted_Offensive_Efficiency=round(Adjusted_Offensive_Efficiency,2))
     DT::datatable(RSSorted,options = list(lengthChange=FALSE, pageLength=10, searching=FALSE), rownames=FALSE)
   })
   
@@ -105,17 +102,13 @@ shinyServer(function(input, output) {
     ggplotly(p3)
   })
 
-  # output$boxPlotAdjusted <- renderPlot({
-  #   
-  #   RegSeasonDataAdjusted %>% ggplot(RegSeasonDataAdjusted, mapping = aes(x=!!input$TeamAdjustedStat,fill=Outcome)) + geom_boxplot() +
-  #     ggtitle(paste("Winning Team vs Losing Team Distribution of", input$TeamAdjustedStat,sep=' '))
-  #   
-  # })
-  
   output$mainDF <- renderDataTable({
-    RegSeasonTT_Sub = RegSeasonTTGrouped %>% select(.,Season,TeamID,NumberOfTournamentWins)
-    RegSeasonDataMainGrouped_Joined = inner_join(RegSeasonDataMainGrouped,RegSeasonTT_Sub,by=c("Season","TeamID"))
-    RegSeasonDataMainGrouped_Joined %>% select(.,Season,TeamName,Adjusted_OE,Adjusted_DE,Adjusted_EM,NumberOfTournamentWins) %>% mutate(.,Adjusted_OE=round(Adjusted_OE,2),Adjusted_DE=round(Adjusted_DE,2),Adjusted_EM=round(Adjusted_EM,2)) %>% filter(.,Season==as.name(input$Season))
+    RegSeasonTT_Sub = RegSeasonTTGrouped %>% select(.,Season,TeamName,Adjusted_Offensive_Efficiency,Adjusted_Defensive_Efficiency,Adjusted_Efficiency_Margin,NumberOfTournamentWins)
+    trans <- c('Loss In Round of 64','Loss In Round of 32','Loss In Sweet 16','Loss In Elite 8','Loss Final Four','Loss In National Championship','National Championship Winner')
+    names(trans) <- c(0,1,2,3,4,5,6)
+    RegSeasonTT_Sub$NumberOfTournamentWins <- trans[as.character(RegSeasonTT_Sub$NumberOfTournamentWins)]
+    RegSeasonTT_Sub %>% mutate(.,Adjusted_Offensive_Efficiency=round(Adjusted_Offensive_Efficiency,2),Adjusted_Defensive_Efficiency=round(Adjusted_Defensive_Efficiency,2),Adjusted_Efficiency_Margin=round(Adjusted_Efficiency_Margin,2)) %>%
+      rename(Adj_Off_Eff=Adjusted_Offensive_Efficiency,Adj_Def_Eff=Adjusted_Defensive_Efficiency,Adj_Eff_Margin=Adjusted_Efficiency_Margin,Tournament_Result=NumberOfTournamentWins) %>% filter(.,Season==as.name(input$Season))
   })
   
   output$Predictions <- renderUI({
@@ -147,54 +140,6 @@ shinyServer(function(input, output) {
     
   })
 
-  # output$boxPlotAdjusted <- renderPlot({
-  #   
-  #   RegSeasonDataAdjusted %>% ggplot(RegSeasonDataAdjusted, mapping = aes(x=!!input$TeamAdjustedStat,fill=Outcome)) + geom_boxplot() +
-  #     ggtitle(paste("Winning Team vs Losing Team Distribution of", input$TeamAdjustedStat,sep=' '))
-  #   
-  # })
-  
-  output$mainDF <- renderDataTable({
-    RegSeasonTT_Sub = RegSeasonTTGrouped %>% select(.,Season,TeamID,NumberOfTournamentWins)
-    RegSeasonDataMainGrouped_Joined = inner_join(RegSeasonDataMainGrouped,RegSeasonTT_Sub,by=c("Season","TeamID"))
-    RegSeasonDataMainGrouped_Joined %>% select(.,Season,TeamName,Adjusted_OE,Adjusted_DE,Adjusted_EM,NumberOfTournamentWins) %>% mutate(.,Adjusted_OE=round(Adjusted_OE,2),Adjusted_DE=round(Adjusted_DE,2),Adjusted_EM=round(Adjusted_EM,2)) %>% filter(.,Season==as.name(input$Season))
-  })
-  
-  output$Predictions <- renderUI({
-    team_1 = team_averages %>% filter(.,TeamName==input$Team1)
-    team_2 = team_averages %>% filter(.,TeamName==input$Team2)
-    
-    ExpectedOE_team1 = season_averages[,'Adjusted_OE'] + (team_1[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_2[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
-    
-    ExpectedOE_team2 = season_averages[,'Adjusted_OE'] + (team_2[,'Adjusted_OE'] - season_averages[,'Adjusted_OE']) + (team_1[,'Adjusted_DE'] - season_averages[,'Adjusted_OE'])
-    
-    ExpectedTempo = season_averages[,'Adjusted_Tempo'] + (team_1[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo']) + (team_2[,'Adjusted_Tempo'] - season_averages[,'Adjusted_Tempo'])
-    
-    Team1Score = ExpectedOE_team1/100 * ExpectedTempo 
-    Team2Score = ExpectedOE_team2/100 * ExpectedTempo
-    Team1Name = team_1[,'TeamName']
-    Team2Name = team_2[,'TeamName']
-    Team1Name <- data.frame(lapply(Team1Name, as.character), stringsAsFactors=FALSE)
-    Team2Name <- data.frame(lapply(Team2Name, as.character), stringsAsFactors=FALSE)
-    
-    div(style="display: flex; justify-content:space-around",
-      div(paste0(Team1Name, ':'), round(Team1Score),style="font-weight: bold; font-size:30px"),
-      div(
-        div(paste('Line: ',Team1Name),paste0(ifelse(Team2Score-Team1Score>0,'+',''),round(Team2Score-Team1Score))),
-        div('O/U:', round(Team1Score + Team2Score)),
-      style="margin-top: 30px"
-      ),
-      div(paste0(Team2Name, ':'),round(Team2Score),style="font-weight: bold; font-size:30px")
-    )
-    
-  })
   
 })
-
-# server <- function(input, output) {
-#   output$cars <- renderPrint({summary(mtcars)})
-#   output$plot <- renderPlot({plot(mtcars$mpg)})
-#   output$plot2 <- renderPlot({plot(mtcars$cyl)})
-#   output$plot3 <- renderPlot({plot(mtcars$hp)})
-# }
 
