@@ -25,3 +25,6 @@ RegSeasonDataGroupedAll <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/
 #RegSeasonDataMainGrouped <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/RegSeasonDataMainGrouped.csv'))
 season_averages <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/SeasonAverages.csv'))
 team_averages <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/TeamAverages.csv'))
+SOS <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/SOS.csv'))
+#ConfStrength <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/conf_strength.csv'))
+HCA <- read.csv(paste0(relativePath,'UserGeneratedDataFiles/HCA.csv'))

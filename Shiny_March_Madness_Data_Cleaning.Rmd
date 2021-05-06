@@ -194,7 +194,9 @@ test = test %>% select(-c('PossessionsPerGame':'OppPaceShare')) %>% select(.,-c(
 ```{r}
 teamWinPercentage = test %>% group_by(.,Season,TeamID) %>% summarise(.,WinPercentage=sum(Outcome=='W')/n())
 
-RegSeasonData = test %>% select(-c(32,34)) %>% select(.,-c('Adjusted_Score':'Adjusted_OppTempo'))
+RegSeasonData = test %>% select(.,-c('Adjusted_Score':'Adjusted_OppTempo'))
+
+RegSeasonData = inner_join(RegSeasonData, teamWinPercentage, by=c('Season','TeamID'))
 
 RegSeasonDataGrouped = RegSeasonData %>% select(.,-c('Outcome')) %>% group_by(.,Season,TeamName,TeamID) %>% summarise(.,across(c('Score':'OppDRPercentage'),mean))
 RegSeasonDataGrouped = inner_join(RegSeasonDataGrouped,teamWinPercentage,by=c('Season','TeamID'))
@@ -203,49 +205,182 @@ RegSeasonDataGrouped = inner_join(RegSeasonDataGrouped,teamWinPercentage,by=c('S
 
 # Get dataset with adjusted stats
 ```{r}
-RegSeasonDataAdjusted = test %>% select(.,-c('Score':'OppPF')) %>% select(.,-c('OppTeamID')) %>% select(.,-c('GameLoc':'OppDRPercentage'))
+RegSeasonDataAdjusted = test %>% select(.,-c('Score':'OppPF')) %>% select(.,-c('GameLoc':'OppDRPercentage'))
 
-RegSeasonDataGroupedAdjusted = RegSeasonDataAdjusted %>% select(.,-c('Outcome'))%>% group_by(.,Season,TeamName,TeamID) %>% summarise(.,across(c('Adjusted_Score':'Adjusted_OppTempo'),mean))
+RegSeasonDataGroupedAdjusted = RegSeasonDataAdjusted %>% select(.,-c('Outcome')) %>% group_by(.,Season,TeamName,TeamID) %>% summarise(.,across(c('Adjusted_Score':'Adjusted_OppTempo'),mean))
 
 RegSeasonDataGroupedAdjusted = inner_join(RegSeasonDataGroupedAdjusted,teamWinPercentage,by=c('Season','TeamID'))
-colnames(RegSeasonDataGroupedAdjusted)
 ```
 
-# Grouped dataset of adjusted and non-adjusted statistics
+# Datasets of adjusted and non-adjusted statistics
 ```{r}
 RegSeasonDataGroupedAll = inner_join(RegSeasonDataGrouped,RegSeasonDataGroupedAdjusted,by=c('Season','TeamName','TeamID')) %>% select(.,-c(WinPercentage.y)) %>% rename(.,WinPercentage=WinPercentage.x)
+
+RegSeasonDataAll = inner_join(RegSeasonData,RegSeasonDataAdjusted,by=c('Season','DayNum','TeamName','TeamID','Outcome','OppTeamID'))
 ```
 
-#Home Field Advantage
+#Home Court Advantage
 
 ```{r}
-test %>% filter(.,Season=='2019') %>% group_by(.,GameLoc) %>% summarise(across(c("Score":"Adjusted_DRPercentage"),mean))
 
-test %>% filter(.,Season=='2019') %>% summarise(.,meanAdjusted_OE=mean(Adjusted_OE))
+#Add Game Location to dataset
+RegSeasonDataAll_GameLoc = RegSeasonDataAll %>% group_by(Season,GameLoc) %>% select_if(is.numeric) %>% summarise(.,across(c('Score':'Adjusted_OppTempo'),mean))
 
-test %>% filter(.,Season=='2019') %>% group_by(.,TeamID,GameLoc) %>% summarise(across(c("Score":"Adjusted_DRPercentage"),mean)) %>% mutate(.,HCA=Score[GameLoc=='H'] - Score[GameLoc=='A'])
+#Get season averages for each stat
+RegSeasonAll_Averages = RegSeasonDataAll %>% group_by(Season) %>% select_if(is.numeric) %>% summarise(.,across(c('Score':'Adjusted_OppTempo'),mean))
 
-hca = test %>% filter(.,Season=='2019') %>% group_by(.,GameLoc) %>% summarise(across(c("Score":"Adjusted_OppEM"),mean))
+#Join season averages with game location averages
+RegSeasonDataAll_GameLoc = inner_join(RegSeasonDataAll_GameLoc,RegSeasonAll_Averages,by=c('Season'))
 
-colnames(hca)
-hca[hca$GameLoc=='H',2:101] - hca[hca$GameLoc=='A',2:101]
+#Change column names
+colnames(RegSeasonDataAll_GameLoc) = gsub(".x","",colnames(RegSeasonDataAll_GameLoc))
+colnames(RegSeasonDataAll_GameLoc) = gsub(".y","_SeasonAvg",colnames(RegSeasonDataAll_GameLoc))
+
+#split dataset to subtract later
+split1 = RegSeasonDataAll_GameLoc %>% select(-contains('_SeasonAvg'))
+split2 = RegSeasonDataAll_GameLoc %>% select(contains('_SeasonAvg'))
+
+#subtract split datasets
+GameLocData = (split1 %>% ungroup() %>% select(Score:Adjusted_OppTempo)) - (split2 %>% ungroup() %>% select(Score_SeasonAvg:Adjusted_OppTempo_SeasonAvg))
+
+#concat both datasets
+RegSeasonDataAll_GameLoc = RegSeasonDataAll_GameLoc %>% select(Season,GameLoc)
+GameLocData = cbind.data.frame(RegSeasonDataAll_GameLoc,GameLocData)
+
+#new dataset with game location adjustments
+RegSeasonDataAllHCA = inner_join(RegSeasonDataAll, GameLocData, by=c('Season','GameLoc'))
+
+#Change column names
+colnames(RegSeasonDataAllHCA) = gsub(".x","",colnames(RegSeasonDataAllHCA))
+colnames(RegSeasonDataAllHCA) = gsub(".y","_GameLocDiff",colnames(RegSeasonDataAllHCA))
+
+#split dataset to subtract later
+split1 = RegSeasonDataAllHCA %>% select(-contains('_GameLocDiff'))
+split2 = RegSeasonDataAllHCA %>% select(contains('_GameLocDiff'))
+
+#subtract split datasets
+GameLocData = (split1 %>% ungroup() %>% select(-c('Outcome','GameLoc','TeamName')) %>% select(Score:Adjusted_OppTempo)) - (split2 %>% ungroup() %>% select(-c()) %>% select(Score_GameLocDiff:Adjusted_OppTempo_GameLocDiff))
+
+RegSeasonDataAllHCA = RegSeasonDataAllHCA %>% relocate(TeamID,TeamName,OppTeamID,Outcome,.before=Score) %>% select(Season,TeamID,TeamName,OppTeamID,Outcome)
+
+RegSeasonDataAllHCA = cbind.data.frame(RegSeasonDataAllHCA,GameLocData)
+
+RegSeasonDataAll = RegSeasonDataAll %>% relocate(TeamID, TeamName, OppTeamID, GameLoc, Outcome, .before=DayNum)
+
+RegSeasonDataAllHCA
+RegSeasonDataAll
+
+# Adj_OffDef = RegSeasonDataAll_GameLoc %>% group_by(Season,TeamID) %>% select_if(is.numeric) %>% summarise(.,across(c('Score':'Adjusted_OppTempo'),mean)) %>% select(.,Season,TeamID,Adjusted_OE,Adjusted_DE) %>% rename(.,Adjusted_OE_SeasonAvg=Adjusted_OE,Adjusted_DE_SeasonAvg=Adjusted_DE)
+
+# RegSeasonDataAll_GameLocGrouped = RegSeasonDataAll_GameLoc %>% group_by(.,Season,TeamID,TeamName,GameLoc) %>% select_if(is.numeric) %>% summarise(.,across(c('Score':'Adjusted_OppTempo'),mean))
+# 
+# RegSeasonDataAll_GameLocGrouped = inner_join(RegSeasonDataAll_GameLocGrouped,Adj_OffDef,by=c('Season','TeamID'))
+# 
+# colnames(RegSeasonDataAll_GameLocGrouped)
+# RegSeasonDataAll_GameLocGrouped = RegSeasonDataAll_GameLocGrouped %>% mutate(.,Adjusted_OE_HCA = (Adjusted_OE[which(GameLoc == 'H')[1]]) - (Adjusted_OE_SeasonAvg)) %>% mutate(.,Adjusted_OE_ACA = (Adjusted_OE[which(GameLoc == 'A')[1]]) - (Adjusted_OE_SeasonAvg)) %>% mutate(.,Adjusted_OE_HCA_Pct = ( ((Adjusted_OE[which(GameLoc == 'H')[1]]) - (Adjusted_OE_SeasonAvg))/(Adjusted_OE_SeasonAvg)) * 100) %>% mutate(.,Adjusted_OE_ACA_Pct = (((Adjusted_OE[which(GameLoc == 'A')[1]]) - (Adjusted_OE_SeasonAvg))/(Adjusted_OE_SeasonAvg)) * 100)
+# 
+# colnames(RegSeasonDataAll_GameLocGrouped)
+# RegSeasonDataAll_GameLocGrouped %>% mutate(Final_Adjusted_OE = Adjusted_OE * Adjusted_OE_HCA_Pct)
+
 
 ```
 
 # Calculating strength of schedule
 ```{r}
 
-AdjEff = test %>% group_by(.,Season,TeamID) %>% summarise(Adjusted_OE=mean(Adjusted_OE), Adjusted_DE=mean(Adjusted_DE), Adjusted_EM=mean(Adjusted_EM))
+AdjEff = RegSeasonDataAll %>% group_by(.,Season,TeamID) %>% summarise(Adjusted_OE=mean(Adjusted_OE), Adjusted_DE=mean(Adjusted_DE), Adjusted_EM=mean(Adjusted_EM))
 
 AdjEff = AdjEff %>% rename(.,OppSeasonAdjusted_OE = Adjusted_OE,OppSeasonAdjusted_DE = Adjusted_DE,OppSeasonAdjusted_EM = Adjusted_EM)
 
-test_withOppAdjEff = inner_join(test,AdjEff,by=c("Season" = "Season","OppTeamID" = "TeamID"))
+RegSeasonDataAll = inner_join(RegSeasonDataAll,AdjEff,by=c("Season" = "Season","OppTeamID" = "TeamID"))
+```
 
-test_withOppAdjEff_Grouped = test_withOppAdjEff  %>% group_by(.,Season,TeamName, TeamID) %>% summarise(across(c('Score':'OppSeasonAdjusted_EM'),mean)) %>% select(.,-c('Outcome','GameLoc'))
+# Coming up with new model using linear regression
+```{r}
+RegSeasonDataAllGrouped = RegSeasonDataAll  %>% group_by(.,Season,TeamName, TeamID) %>% summarise(across(c('Score':'OppSeasonAdjusted_EM'),mean)) %>% select(.,-c('Outcome'))
 
-test_withOppAdjEff %>% group_by(.,Season,TeamName,TeamID) %>% summarise(across(c('OppSeasonAdjusted_OE':'OppSeasonAdjusted_EM'),mean)) %>% filter(.,Season=='2021') %>% arrange(.,desc(OppSeasonAdjusted_EM))
+RegSeasonDataAll = RegSeasonDataAll %>% mutate(.,ScoreMargin=Score-OppScore)
+RegSeasonDataAll = RegSeasonDataAll %>% mutate(.,PointTotal=Score+OppScore)
 
-test_withOppAdjEff %>% group_by(.,Season,TeamName,TeamID) %>% summarise(Adjusted_OE=mean(Adjusted_OE),Adjusted_DE=mean(Adjusted_DE),Adjusted_EM=mean(Adjusted_EM),OppSeasonAdjusted_OE=mean(OppSeasonAdjusted_OE),OppSeasonAdjusted_DE=mean(OppSeasonAdjusted_DE),OppSeasonAdjusted_EM=mean(OppSeasonAdjusted_EM)) %>% filter(.,Season=='2021') %>% mutate(SOSAdjustment=(Adjusted_EM+(OppSeasonAdjusted_EM))) %>% arrange(.,desc(SOSAdjustment))
+#Perform model only on the 2021 season data
+RegSeasonDataAll_2021 = RegSeasonDataAll %>% filter(.,Season=='2021')
+RegSeasonDataAllGrouped_2021 = RegSeasonDataAllGrouped %>% filter(.,Season=='2021')
+
+#Remove OppTeamID column before joining to the each season game for 2021 dataset
+RegSeasonDataAllGrouped_2021 = RegSeasonDataAllGrouped_2021 %>% select(.,-c('OppTeamID'))
+seasonAvgJoinedToGames = inner_join(RegSeasonDataAll_2021, RegSeasonDataAllGrouped_2021, by=c('Season','TeamName','TeamID'))
+
+#Do data cleaning
+seasonAvgJoinedToGames = seasonAvgJoinedToGames %>% select(.,-contains('.x'))
+colnames(seasonAvgJoinedToGames) = gsub(".y","_Team_SeasonAvg",colnames(seasonAvgJoinedToGames))
+
+seasonAvgJoinedToGames = inner_join(seasonAvgJoinedToGames, test_withOppAdjEff_Grouped_2021, by=c('Season'='Season','OppTeamID'='TeamID'))
+
+#Do data cleaning
+seasonAvgJoinedToGames = seasonAvgJoinedToGames %>% rename(.,TeamName=TeamName.x,OppTeamName=TeamName.y)
+colnames(seasonAvgJoinedToGames)[118:224]=paste0(colnames(seasonAvgJoinedToGames)[118:224],"_Opp_SeasonAvg")
+
+#Add Expected Tempo to dataframe
+seasonAvgJoinedToGames = seasonAvgJoinedToGames %>% mutate(.,ExpectedTempo=as.numeric(season_averages[,'Adjusted_Tempo']) + (Adjusted_Tempo_Team_SeasonAvg - as.numeric(season_averages[,'Adjusted_Tempo'])) + (Adjusted_Tempo_Opp_SeasonAvg - as.numeric(season_averages[,'Adjusted_Tempo'])))
+
+#Subset Data / Get rid of non numeric columns
+seasonAvgJoinedToGames_Sub = seasonAvgJoinedToGames[c(7,9:225)]
+seasonAvgJoinedToGames_Sub = seasonAvgJoinedToGames_Sub[c(-110)]
+
+#Fit linear regression model
+lm_ScoreMargin = lm(ScoreMargin~.,data=seasonAvgJoinedToGames_Sub)
+summary(lm_ScoreMargin)
+
+
+########## Predict the point margin for two teams ################
+team = RegSeasonDataAllGrouped_2021 %>% filter(.,TeamName=='Wisconsin')
+opp = RegSeasonDataAllGrouped_2021 %>% filter(.,TeamName=='Colgate')
+
+
+colnames(team)[4:111]=paste0(colnames(team)[4:111],"_Team_SeasonAvg")
+colnames(opp)[4:111]=paste0(colnames(opp)[4:111],"_Opp_SeasonAvg")
+
+team = team %>% ungroup() %>% select(.,-c(Season, TeamName, TeamID))
+opp = opp %>% ungroup() %>% select(.,-c(Season, TeamName, TeamID))
+
+dataToPredict = cbind(team,opp)
+
+#Add expected tempo to dataframe row
+dataToPredict = dataToPredict %>% mutate(.,ExpectedTempo=as.numeric(season_averages[,'Adjusted_Tempo']) + (Adjusted_Tempo_Team_SeasonAvg - as.numeric(season_averages[,'Adjusted_Tempo'])) + (Adjusted_Tempo_Opp_SeasonAvg - as.numeric(season_averages[,'Adjusted_Tempo'])))
+predicted_margin = predict(lm_ScoreMargin, newdata=dataToPredict)
+
+########## Predict the point total for two teams ################
+
+#Subset Data / Get rid of non numeric columns
+seasonAvgJoinedToGames_Sub = seasonAvgJoinedToGames[c(8,9:225)]
+seasonAvgJoinedToGames_Sub = seasonAvgJoinedToGames_Sub[c(-110)]
+
+#Fit linear regression model
+lm_PointTotal = lm(PointTotal~.,data=seasonAvgJoinedToGames_Sub)
+summary(lm_PointTotal)
+
+team = RegSeasonDataAllGrouped_2021 %>% filter(.,TeamName=='Wisconsin')
+opp = RegSeasonDataAllGrouped_2021 %>% filter(.,TeamName=='Colgate')
+
+colnames(team)[4:111]=paste0(colnames(team)[4:111],"_Team_SeasonAvg")
+colnames(opp)[4:111]=paste0(colnames(opp)[4:111],"_Opp_SeasonAvg")
+
+team = team %>% ungroup() %>% select(.,-c(Season, TeamName, TeamID))
+opp = opp %>% ungroup() %>% select(.,-c(Season, TeamName, TeamID))
+
+dataToPredict = cbind(team,opp)
+
+#Add expected tempo to dataframe row
+dataToPredict = dataToPredict %>% mutate(.,ExpectedTempo=as.numeric(season_averages[,'Adjusted_Tempo']) + (Adjusted_Tempo_Team_SeasonAvg - as.numeric(season_averages[,'Adjusted_Tempo'])) + (Adjusted_Tempo_Opp_SeasonAvg - as.numeric(season_averages[,'Adjusted_Tempo'])))
+
+predicted_pointTotal = predict(lm_PointTotal, newdata=dataToPredict)
+
+paste((predicted_pointTotal/2) + (predicted_margin/2), (predicted_pointTotal/2) - (predicted_margin/2),sep=' - ')
+```
+
+# Model experimentation
+```{r}
+colnames(seasonAvgJoinedToGames)
 
 ```
 
@@ -262,9 +397,6 @@ tourneyTeams = tourneyTeams %>% replace(is.na(.), 0)
 RegSeasonTT = inner_join(RegSeasonData,tourneyTeams,by=c('Season','TeamID'))
 RegSeasonTTGrouped = inner_join(RegSeasonDataGroupedAll,tourneyTeams,by=c('Season','TeamID'))
 
-
-
-
 ```
 
 
@@ -280,22 +412,24 @@ RegSeasonTTGrouped = inner_join(RegSeasonDataGroupedAll,tourneyTeams,by=c('Seaso
 ```
 
 ```{r}
-# colnames(RegSeasonTTGrouped) = gsub("Opp","Opponent_",colnames(RegSeasonTTGrouped))
-# colnames(RegSeasonTTGrouped) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonTTGrouped))
-# colnames(RegSeasonTTGrouped) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonTTGrouped))
-# colnames(RegSeasonTTGrouped) = gsub("EM","Efficiency_Margin",colnames(RegSeasonTTGrouped))
-# fileName = paste(path_out, 'RegSeasonTTGrouped.csv',sep = '')
-# write.csv(RegSeasonTTGrouped,fileName)
+colnames(RegSeasonTTGrouped) = gsub("Opp","Opponent_",colnames(RegSeasonTTGrouped))
+colnames(RegSeasonTTGrouped) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonTTGrouped))
+colnames(RegSeasonTTGrouped) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonTTGrouped))
+colnames(RegSeasonTTGrouped) = gsub("EM","Efficiency_Margin",colnames(RegSeasonTTGrouped))
+colnames(RegSeasonTTGrouped) = gsub("Percentage","_Percentage",colnames(RegSeasonTTGrouped))
+fileName = paste(path_out, 'RegSeasonTTGrouped.csv',sep = '')
+write.csv(RegSeasonTTGrouped,fileName)
 ```
 
 ```{r}
-# RegSeasonData = RegSeasonData %>% filter(.,Season > 2016 )
-# colnames(RegSeasonData) = gsub("Opp","Opponent_",colnames(RegSeasonData))
-# colnames(RegSeasonData) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonData))
-# colnames(RegSeasonData) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonData))
-# colnames(RegSeasonData) = gsub("EM","Efficiency_Margin",colnames(RegSeasonData))
-# fileName = paste(path_out, 'RegSeasonData.csv',sep = '')
-# write.csv(RegSeasonData,fileName)
+RegSeasonData = RegSeasonData %>% filter(.,Season > 2016 )
+colnames(RegSeasonData) = gsub("Opp","Opponent_",colnames(RegSeasonData))
+colnames(RegSeasonData) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonData))
+colnames(RegSeasonData) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonData))
+colnames(RegSeasonData) = gsub("EM","Efficiency_Margin",colnames(RegSeasonData))
+colnames(RegSeasonData) = gsub("Percentage","_Percentage",colnames(RegSeasonData))
+fileName = paste(path_out, 'RegSeasonData.csv',sep = '')
+write.csv(RegSeasonData,fileName)
 ```
 
 ```{r}
@@ -306,12 +440,13 @@ RegSeasonTTGrouped = inner_join(RegSeasonDataGroupedAll,tourneyTeams,by=c('Seaso
 
 
 ```{r}
-# colnames(RegSeasonDataGrouped) = gsub("Opp","Opponent_",colnames(RegSeasonDataGrouped))
-# colnames(RegSeasonDataGrouped) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonDataGrouped))
-# colnames(RegSeasonDataGrouped) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonDataGrouped))
-# colnames(RegSeasonDataGrouped) = gsub("EM","Efficiency_Margin",colnames(RegSeasonDataGrouped))
-# fileName = paste(path_out, 'RegSeasonDataGrouped.csv',sep = '')
-# write.csv(RegSeasonDataGrouped,fileName)
+colnames(RegSeasonDataGrouped) = gsub("Opp","Opponent_",colnames(RegSeasonDataGrouped))
+colnames(RegSeasonDataGrouped) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonDataGrouped))
+colnames(RegSeasonDataGrouped) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonDataGrouped))
+colnames(RegSeasonDataGrouped) = gsub("EM","Efficiency_Margin",colnames(RegSeasonDataGrouped))
+colnames(RegSeasonDataGrouped) = gsub("Percentage","_Percentage",colnames(RegSeasonDataGrouped))
+fileName = paste(path_out, 'RegSeasonDataGrouped.csv',sep = '')
+write.csv(RegSeasonDataGrouped,fileName)
 ```
 
 ```{r}
@@ -320,12 +455,13 @@ RegSeasonTTGrouped = inner_join(RegSeasonDataGroupedAll,tourneyTeams,by=c('Seaso
 ```
 
 ```{r}
-# colnames(RegSeasonDataGroupedAll) = gsub("Opp","Opponent_",colnames(RegSeasonDataGroupedAll))
-# colnames(RegSeasonDataGroupedAll) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonDataGroupedAll))
-# colnames(RegSeasonDataGroupedAll) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonDataGroupedAll))
-# colnames(RegSeasonDataGroupedAll) = gsub("EM","Efficiency_Margin",colnames(RegSeasonDataGroupedAll))
-# fileName = paste(path_out, 'RegSeasonDataGroupedAll.csv',sep = '')
-# write.csv(RegSeasonDataGroupedAll,fileName)
+colnames(RegSeasonDataGroupedAll) = gsub("Opp","Opponent_",colnames(RegSeasonDataGroupedAll))
+colnames(RegSeasonDataGroupedAll) = gsub("OE","Offensive_Efficiency",colnames(RegSeasonDataGroupedAll))
+colnames(RegSeasonDataGroupedAll) = gsub("DE","Defensive_Efficiency",colnames(RegSeasonDataGroupedAll))
+colnames(RegSeasonDataGroupedAll) = gsub("EM","Efficiency_Margin",colnames(RegSeasonDataGroupedAll))
+colnames(RegSeasonDataGroupedAll) = gsub("Percentage","_Percentage",colnames(RegSeasonDataGroupedAll))
+fileName = paste(path_out, 'RegSeasonDataGroupedAll.csv',sep = '')
+write.csv(RegSeasonDataGroupedAll,fileName)
 ```
 
 ```{r}
