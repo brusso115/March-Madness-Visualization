@@ -16,7 +16,7 @@ navbarPage("",
       sidebarPanel(
         varSelectInput(inputId="TeamStat",
                        label="Game Statistic",
-                       data=RegSeasonData[c(-1,-2,-3,-17,-56)])
+                       data=RegSeasonData[c(-1,-2,-3,-17,-56, -58)])
       ),
       mainPanel(
           plotOutput("boxPlot")
@@ -52,7 +52,7 @@ navbarPage("",
       sidebarPanel(
         varSelectInput(inputId="PairedStat",
                        label="Regular Season Team Statistic",
-                       data=RegSeasonDataGrouped[c(-1,-2,-3,-4,-56)])
+                       data=RegSeasonDataGrouped[c(-1,-2,-3,-4,-56,-57)])
       ),
       mainPanel(
         plotlyOutput("AdjVsNonAdj")
@@ -93,7 +93,7 @@ navbarPage("",
       sidebarPanel(
         varSelectInput(inputId="TourneyTeamStat",
                        label="Regular Season Team Statistic",
-                       data=RegSeasonTTGrouped[c(-1,-2,-3,-4,-5,-17)])
+                       data=RegSeasonTTGrouped[c(-1,-2,-3,-4,-5,-17,-110)])
 
       ),
       mainPanel(

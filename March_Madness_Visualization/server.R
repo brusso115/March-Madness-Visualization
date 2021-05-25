@@ -64,7 +64,7 @@ shinyServer(function(input, output) {
 
   output$HCALineChart <- renderPlotly({
     HCALineChart <- ggplot(HCA) + geom_line(aes(x=Season, y=!!input$GameLocStatLineChart, color=GameLoc)) +
-      ggtitle(paste('Season Trend in Location Advantage for', sub('_LocDiff', '', as.character(input$GameLocStat))))
+      ggtitle(paste('Season Trend in Location Advantage for', sub('_LocDiff', '', as.character(input$GameLocStatLineChart))))
     ggplotly(HCALineChart)
   })
   
@@ -157,8 +157,10 @@ shinyServer(function(input, output) {
     trans <- c('Loss In Round of 64','Loss In Round of 32','Loss In Sweet 16','Loss In Elite 8','Loss Final Four','Loss In National Championship','National Championship Winner')
     names(trans) <- c(0,1,2,3,4,5,6)
     RegSeasonTT_Sub$NumberOfTournamentWins <- trans[as.character(RegSeasonTT_Sub$NumberOfTournamentWins)]
-    RegSeasonTT_Sub = RegSeasonTT_Sub %>% mutate(.,Adjusted_Offensive_Efficiency=round(Adjusted_Offensive_Efficiency,2),Adjusted_Defensive_Efficiency=round(Adjusted_Defensive_Efficiency,2),Adjusted_Efficiency_Margin=round(Adjusted_Efficiency_Margin,2)) %>%
-      rename(Adj_Off_Eff=Adjusted_Offensive_Efficiency,Adj_Def_Eff=Adjusted_Defensive_Efficiency,Adj_Eff_Margin=Adjusted_Efficiency_Margin,Tournament_Result=NumberOfTournamentWins) %>% filter(.,Season==as.name(input$Season))
+    RegSeasonTT_Sub = RegSeasonTT_Sub %>% mutate(.,Adjusted_Offensive_Efficiency=round(Adjusted_Offensive_Efficiency,2),Adjusted_Defensive_Efficiency=round(Adjusted_Defensive_Efficiency,2),Adjusted_Efficiency_Margin=round(Adjusted_Efficiency_Margin,2))
+    RegSeasonTT_Sub = RegSeasonTT_Sub %>% filter(.,Season == input$Season)
+    RegSeasonTT_Sub = RegSeasonTT_Sub %>% arrange(desc(Adjusted_Efficiency_Margin))
+    #RegSeasonTT_Sub = RegSeasonTT_Sub %>% mutate(.,Adjusted_Offensive_Efficiency=round(Adjusted_OE,2),Adjusted_Defensive_Efficiency=round(Adjusted_DE,2),Adjusted_Efficiency_Margin=round(Adjusted_EM,2)) %>% rename(Adj_Off_Eff=Adjusted_Offensive_Efficiency,Adj_Def_Eff=Adjusted_Defensive_Efficiency,Adj_Eff_Margin=Adjusted_Efficiency_Margin) %>% filter(.,Season=='2021') %>% select(Season,TeamName,Adj_Off_Eff,Adj_Def_Eff,Adj_Eff_Margin)
     DT::datatable(RegSeasonTT_Sub, caption = htmltools::tags$caption( style = 'caption-side: top; text-align: center; color:black; font-size:200% ;','Regular Season Offense/Defense Rankings w/ Tournament Result'),options = list(lengthChange=FALSE, pageLength=10, searching=FALSE), rownames=FALSE)
     
   })
